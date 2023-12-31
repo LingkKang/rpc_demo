@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"net"
+	"rpc_demo/server/pkg/protocol"
 	"strconv"
 	"time"
 )
@@ -10,6 +11,7 @@ import (
 var PORT = 8333
 
 func main() {
+	fmt.Printf("packages worked %f\n", protocol.GetFloat())
 	listener, _ := net.Listen("tcp", ":"+strconv.Itoa(PORT))
 	defer listener.Close()
 	fmt.Printf("Start to listen on port %d...\n\n", PORT)
