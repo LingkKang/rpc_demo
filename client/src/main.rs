@@ -1,3 +1,5 @@
+mod protocol;
+
 use std::{
     io::{Read, Write},
     net::TcpStream,
