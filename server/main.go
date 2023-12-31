@@ -1,16 +1,13 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
 	"net"
 	"strconv"
-	"strings"
 	"time"
 )
 
 var PORT = 8333
-var EXIT = "\xff\xf4\xff\xfd\x06" // Telnet interrupt signal
 
 func main() {
 	listener, _ := net.Listen("tcp", ":"+strconv.Itoa(PORT))
@@ -31,24 +28,44 @@ func main() {
 func handleRequest(conn net.Conn) {
 	defer conn.Close()
 
-	conn.Write([]byte(
-		"Greeting from Golang!\nType `exit` to exit\n"))
-
-	reader := bufio.NewReader(conn)
+	conn.Write([]byte("Greeting from Golang!\n"))
+	conn.SetDeadline(time.Now().Add(10 * time.Second))
 
 	for {
-		message, _ := reader.ReadString('\n')
-		trimed_message := trimMessage(message)
+		// Read the head of the message
+		head := make([]byte, 1)
+		_, err := conn.Read(head)
+		if err != nil {
+			handleErr(conn, err)
+			break
+		}
 
-		fmt.Printf("Received message: %s\n", trimed_message)
+		// Calculate the message length accroding to the protocol definition
+		msg_len := head[0] & 0x3F
+
+		// Read the message payload
+		payload_len := msg_len - 2
+		payload := make([]byte, payload_len)
+		_, err = conn.Read(payload)
+		if err != nil {
+			handleErr(conn, err)
+			break
+		}
+
+		// Read the checksum bit of the message
+		checksum := make([]byte, 1)
+		_, err = conn.Read(checksum)
+		if err != nil {
+			handleErr(conn, err)
+			break
+		}
 
 		conn.Write([]byte("Message received.\n"))
 
-		if trimed_message == "exit" || trimed_message == EXIT {
-			conn.Write([]byte("Goodbye!\n"))
-			time.Sleep(100 * time.Millisecond)
-			break
-		}
+		fmt.Println("Received (in hex):")
+		fmt.Printf("\thead:   \t%x\n", head)
+		fmt.Printf("\tpayload:\t%x\n", payload)
+		fmt.Printf("\tchecksum:\t%x\n", checksum)
 	}
 
 	fmt.Printf(
@@ -56,10 +73,16 @@ func handleRequest(conn net.Conn) {
 		conn.RemoteAddr().String())
 }
 
-func trimMessage(str string) string {
-	return strings.TrimRightFunc(
-		str,
-		func(r rune) bool {
-			return r == ' ' || r == '\r' || r == '\n'
-		})
+func handleErr(conn net.Conn, err error) {
+	// reset the timeout duration
+	// otherwise writting to client is disabled
+	conn.SetDeadline(time.Time{})
+	if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
+		fmt.Println("Connection timed out, closing")
+		conn.Write([]byte("Connection timeout...\n"))
+	} else {
+		fmt.Println("Error reading: ", err.Error())
+		conn.Write([]byte("Error at reading, closing...\n"))
+	}
+	time.Sleep(100 * time.Millisecond)
 }
