@@ -2,10 +2,14 @@ mod protocol;
 
 use std::{
     io::{Read, Write},
-    net::TcpStream,
+    net::TcpStream, vec,
 };
 
+use crate::protocol::{message::Message, protocol::serialize};
+
 fn main() {
+    let msg =  Message::new_request(vec![0x01, 0x02]);
+
     let url = "test.lingkang.dev:8333";
     let mut stream = TcpStream::connect(url).unwrap();
     receive_message(&mut stream);
@@ -13,6 +17,11 @@ fn main() {
     let greeting = "Hello from Rust!\n";
     print!("Sending: {}", greeting);
     let _ = stream.write_all(greeting.as_bytes());
+    receive_message(&mut stream);
+
+    let msg_str = serialize(&msg);
+    print!("Sending: {:?}\n", msg_str);
+    let _ = stream.write_all(&msg_str);
     receive_message(&mut stream);
 
     let exit = "exit\n";
