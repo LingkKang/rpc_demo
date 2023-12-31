@@ -34,10 +34,26 @@ func handleRequest(conn net.Conn) {
 	conn.Write([]byte(
 		"Greeting from Golang!\nType `exit` to exit\n"))
 
+	conn.SetDeadline(time.Now().Add(10 * time.Second))
+
 	reader := bufio.NewReader(conn)
 
 	for {
-		message, _ := reader.ReadString('\n')
+		message, err := reader.ReadString('\n')
+		if err != nil {
+			// reset the timeout duration
+			// otherwise writting to client is disabled
+			conn.SetDeadline(time.Time{})
+			if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
+				fmt.Println("Connection timed out, closing")
+				conn.Write([]byte("Connection timeout...\n"))
+			} else {
+				fmt.Println("Error reading: ", err.Error())
+				conn.Write([]byte("Error at reading, closing...\n"))
+			}
+			time.Sleep(100 * time.Millisecond)
+			break
+		}
 		trimed_message := trimMessage(message)
 
 		fmt.Printf("Received message: %s\n", trimed_message)
