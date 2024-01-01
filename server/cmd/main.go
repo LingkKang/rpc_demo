@@ -9,10 +9,10 @@ import (
 	"time"
 )
 
-var PORT = 8333
+const PORT = 8333
+const TIMEOUT_DURATION = 30
 
 func main() {
-	fmt.Printf("packages worked %f\n", protocol.GetFloat())
 	listener, _ := net.Listen("tcp", ":"+strconv.Itoa(PORT))
 	defer listener.Close()
 	fmt.Printf("Start to listen on port %d...\n\n", PORT)
@@ -32,22 +32,20 @@ func handleRequest(conn net.Conn) {
 	defer conn.Close()
 
 	conn.Write([]byte("Greeting from Golang!\n"))
-	conn.SetDeadline(time.Now().Add(10 * time.Second))
+	conn.SetDeadline(time.Now().Add(
+		TIMEOUT_DURATION * time.Second))
 
 	for {
 		// Read the head of the message
-		head := make([]byte, 1)
+		head := make([]byte, protocol.MSG_HEADER_SIZE)
 		_, err := conn.Read(head)
 		if err != nil {
 			handleErr(conn, err)
 			break
 		}
 
-		// Calculate the message length accroding to the protocol definition
-		msg_len := head[0] & 0x3F
-
 		// Read the message payload
-		payload_len := msg_len - 2
+		payload_len := protocol.GetPayloadLength(head[0])
 		payload := make([]byte, payload_len)
 		_, err = conn.Read(payload)
 		if err != nil {
@@ -56,7 +54,7 @@ func handleRequest(conn net.Conn) {
 		}
 
 		// Read the checksum bit of the message
-		checksum := make([]byte, 1)
+		checksum := make([]byte, protocol.MSG_CHECKSUM_SIZE)
 		_, err = conn.Read(checksum)
 		if err != nil {
 			handleErr(conn, err)
@@ -69,6 +67,12 @@ func handleRequest(conn net.Conn) {
 		fmt.Printf("\thead:   \t%x\n", head)
 		fmt.Printf("\tpayload:\t%x\n", payload)
 		fmt.Printf("\tchecksum:\t%x\n", checksum)
+
+		processMessage(
+			protocol.NewMessageFromBytes(
+				head[0],
+				payload,
+				checksum[0]))
 	}
 
 	fmt.Printf(
@@ -90,4 +94,10 @@ func handleErr(conn net.Conn, err error) {
 		conn.Write([]byte("Error at reading, closing...\n"))
 	}
 	time.Sleep(100 * time.Millisecond)
+}
+
+func processMessage(msg protocol.Message) {
+	fmt.Println("Processing msg")
+	time.Sleep(10 * time.Millisecond)
+	fmt.Println("Processed")
 }

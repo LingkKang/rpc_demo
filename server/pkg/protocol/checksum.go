@@ -11,7 +11,3 @@ func generateChecksum(data []byte) byte {
 func validateChecksum(data []byte, checksum byte) bool {
 	return generateChecksum(data) == checksum
 }
-
-func getAnInt() int {
-	return 10
-}
