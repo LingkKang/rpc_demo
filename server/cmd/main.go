@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"net"
 	"rpc_demo/server/pkg/protocol"
 	"strconv"
@@ -82,6 +83,8 @@ func handleErr(conn net.Conn, err error) {
 	if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
 		fmt.Println("Connection timed out, closing")
 		conn.Write([]byte("Connection timeout...\n"))
+	} else if err == io.EOF {
+		fmt.Println("Connection closed by client")
 	} else {
 		fmt.Println("Error reading: ", err.Error())
 		conn.Write([]byte("Error at reading, closing...\n"))
