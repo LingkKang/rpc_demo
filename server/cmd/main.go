@@ -64,15 +64,20 @@ func handleRequest(conn net.Conn) {
 		conn.Write([]byte("Message received.\n"))
 
 		fmt.Println("Received (in hex):")
-		fmt.Printf("\thead:   \t%x\n", head)
-		fmt.Printf("\tpayload:\t%x\n", payload)
-		fmt.Printf("\tchecksum:\t%x\n", checksum)
+		fmt.Printf("\thead:   \t%X\n", head)
+		fmt.Printf("\tpayload:\t%X\n", payload)
+		fmt.Printf("\tchecksum:\t%X\n", checksum)
 
-		processMessage(
-			protocol.NewMessageFromBytes(
-				head[0],
-				payload,
-				checksum[0]))
+		msg, err := protocol.NewMessageFromBytes(
+			head[0],
+			payload,
+			checksum[0])
+		if err != nil {
+			fmt.Println("The message is invalid")
+			fmt.Println(err.Error())
+			panic("TODO")
+		}
+		processMessage(msg)
 	}
 
 	fmt.Printf(
@@ -97,7 +102,14 @@ func handleErr(conn net.Conn, err error) {
 }
 
 func processMessage(msg protocol.Message) {
-	fmt.Println("Processing msg")
-	time.Sleep(10 * time.Millisecond)
-	fmt.Println("Processed")
+	switch protocol.GetMessageCode(msg) {
+	case protocol.REQUEST:
+		handleRequestPayload(protocol.GetMessagePayload(msg))
+	default:
+		panic("Unimplemented message type\n")
+	}
+}
+
+func handleRequestPayload(payload []byte) {
+	panic("TODO")
 }

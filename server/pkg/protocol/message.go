@@ -1,5 +1,7 @@
 package protocol
 
+import "fmt"
+
 type MessageCode byte
 
 const (
@@ -38,8 +40,23 @@ func convertMessageCodeFromByte(code byte) MessageCode {
 func NewMessageFromBytes(
 	head byte,
 	payload []byte,
-	checksum byte) Message {
+	checksum byte) (Message, error) {
 	msg_code := convertMessageCodeFromByte(head >> 6)
 	msg_len := GetPayloadLength(head)
-	return Message{msg_code, msg_len, payload, checksum}
+
+	// Validate checksum.
+	data := append([]byte{head}, payload...)
+	if !validateChecksum(data, checksum) {
+		return Message{}, fmt.Errorf("checksum validation failed")
+	}
+
+	return Message{msg_code, msg_len, payload, checksum}, nil
+}
+
+func GetMessageCode(msg Message) MessageCode {
+	return msg.msg_code
+}
+
+func GetMessagePayload(msg Message) []byte {
+	return msg.msg_payload
 }
