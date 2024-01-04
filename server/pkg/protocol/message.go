@@ -1,6 +1,10 @@
 package protocol
 
-import "fmt"
+import (
+	"encoding/binary"
+	"fmt"
+	"math"
+)
 
 type MessageCode byte
 
@@ -59,4 +63,17 @@ func GetMessageCode(msg Message) MessageCode {
 
 func GetMessagePayload(msg Message) []byte {
 	return msg.msg_payload
+}
+
+func ParsePayloadToFloat(payload []byte) ([]float64, error) {
+	if len(payload)%8 != 0 {
+		return nil, fmt.Errorf(
+			"payload length is not a multiple of 8 when handling a REQUEST")
+	}
+	var floats []float64
+	for i := 0; i < len(payload); i += 8 {
+		eight_bits := binary.BigEndian.Uint64(payload[i : i+8])
+		floats = append(floats, math.Float64frombits(eight_bits))
+	}
+	return floats, nil
 }

@@ -1,26 +1,41 @@
 package main
 
 import (
-	"fmt"
 	"io"
+	"log"
+	"math"
 	"net"
+	"os"
 	"rpc_demo/server/pkg/protocol"
 	"strconv"
 	"time"
 )
 
 const PORT = 8333
-const TIMEOUT_DURATION = 30
+const TIMEOUT_DURATION = 10
+
+var (
+	DebugLogger *log.Logger
+	InfoLogger  *log.Logger
+	WarnLogger  *log.Logger
+	ErrorLogger *log.Logger
+)
 
 func main() {
+
+	DebugLogger = log.New(os.Stdout, "[DEBUG]\t", log.Ldate|log.Ltime|log.LUTC)
+	InfoLogger = log.New(os.Stdout, "[INFO]\t", log.Ldate|log.Ltime|log.LUTC)
+	WarnLogger = log.New(os.Stdout, "[WARN]\t", log.Ldate|log.Ltime|log.LUTC)
+	ErrorLogger = log.New(os.Stdout, "[ERROR]\t", log.Ldate|log.Ltime|log.LUTC)
+
 	listener, _ := net.Listen("tcp", ":"+strconv.Itoa(PORT))
 	defer listener.Close()
-	fmt.Printf("Start to listen on port %d...\n\n", PORT)
+	InfoLogger.Printf("Start to listen on port %d...\n", PORT)
 
 	for {
 		connection, _ := listener.Accept()
 
-		fmt.Printf(
+		InfoLogger.Printf(
 			"Connected to %s\n",
 			connection.RemoteAddr().String())
 
@@ -63,24 +78,24 @@ func handleRequest(conn net.Conn) {
 
 		conn.Write([]byte("Message received.\n"))
 
-		fmt.Println("Received (in hex):")
-		fmt.Printf("\thead:   \t%X\n", head)
-		fmt.Printf("\tpayload:\t%X\n", payload)
-		fmt.Printf("\tchecksum:\t%X\n", checksum)
+		InfoLogger.Printf(
+			"Message with head %X and checksum %X (in hex) received",
+			head, checksum)
+		DebugLogger.Printf("Payload: %X\n", payload)
 
 		msg, err := protocol.NewMessageFromBytes(
 			head[0],
 			payload,
 			checksum[0])
 		if err != nil {
-			fmt.Println("The message is invalid")
-			fmt.Println(err.Error())
-			panic("TODO")
+			ErrorLogger.Println("The message is invalid")
+			ErrorLogger.Println(err.Error())
+			ErrorLogger.Panicln("TODO")
 		}
 		processMessage(msg)
 	}
 
-	fmt.Printf(
+	InfoLogger.Printf(
 		"Disconnected with %s\n",
 		conn.RemoteAddr().String())
 }
@@ -90,12 +105,12 @@ func handleErr(conn net.Conn, err error) {
 	// otherwise writting to client is disabled
 	conn.SetDeadline(time.Time{})
 	if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
-		fmt.Println("Connection timed out, closing")
+		WarnLogger.Println("Connection timed out, closing")
 		conn.Write([]byte("Connection timeout...\n"))
 	} else if err == io.EOF {
-		fmt.Println("Connection closed by client")
+		InfoLogger.Println("Connection closed by client")
 	} else {
-		fmt.Println("Error reading: ", err.Error())
+		ErrorLogger.Println("Error reading: ", err.Error())
 		conn.Write([]byte("Error at reading, closing...\n"))
 	}
 	time.Sleep(100 * time.Millisecond)
@@ -104,12 +119,35 @@ func handleErr(conn net.Conn, err error) {
 func processMessage(msg protocol.Message) {
 	switch protocol.GetMessageCode(msg) {
 	case protocol.REQUEST:
-		handleRequestPayload(protocol.GetMessagePayload(msg))
+		handleMessageRequest(msg)
+	case protocol.ERROR:
+		handleMessageError(msg)
 	default:
-		panic("Unimplemented message type\n")
+		handleMessageOther(msg)
 	}
 }
 
-func handleRequestPayload(payload []byte) {
-	panic("TODO")
+func handleMessageRequest(msg protocol.Message) {
+	payload := protocol.GetMessagePayload(msg)
+	sides, err := protocol.ParsePayloadToFloat(payload)
+	if err == nil {
+		DebugLogger.Println("Parse the sides as ", sides)
+		a := sides[0]
+		b := sides[1]
+		c := calculateHypotenuse(a, b)
+		DebugLogger.Println("Get hypotenuse ", c)
+	}
+
+}
+
+func handleMessageError(msg protocol.Message) {
+
+}
+
+func handleMessageOther(msg protocol.Message) {
+
+}
+
+func calculateHypotenuse(a float64, b float64) float64 {
+	return math.Hypot(a, b)
 }
