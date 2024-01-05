@@ -20,8 +20,8 @@ func TestGenerateChecksum(t *testing.T) {
 			run_result := generateChecksum(tc.input)
 			if run_result != tc.checksum {
 				t.Errorf(
-					"generateChecksum(%v) expects %d, but got %d",
-					tc.input, run_result, tc.checksum)
+					"expected %d, got %d",
+					run_result, tc.checksum)
 			}
 		})
 	}

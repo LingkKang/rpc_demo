@@ -129,7 +129,7 @@ func processMessage(msg protocol.Message) {
 
 func handleMessageRequest(msg protocol.Message) {
 	payload := protocol.GetMessagePayload(msg)
-	sides, err := protocol.ParsePayloadToFloat(payload)
+	sides, err := protocol.ParsePayloadToFloat64s(payload)
 	if err == nil {
 		DebugLogger.Println("Parse the sides as ", sides)
 		a := sides[0]
