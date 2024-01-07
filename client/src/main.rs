@@ -1,3 +1,4 @@
+mod logger;
 mod protocol;
 
 use std::{
@@ -12,14 +13,19 @@ use crate::protocol::{
     protocol::{deserialize, serialize},
 };
 
+use crate::logger::logger::Logger;
+
 const URL: &str = "test.lingkang.dev:8333";
 const MAX_TASKS: usize = 4;
 
+#[allow(unreachable_code)]
 fn main() {
+    Logger::init(Some(log::LevelFilter::Debug));
+
     let mut stream = match TcpStream::connect(URL) {
         Ok(stream) => stream,
         Err(e) => {
-            println!("{}", e);
+            log::error!("{}", e);
             return;
         }
     };
@@ -27,14 +33,14 @@ fn main() {
     for _ in 0..MAX_TASKS {
         let msg = Message::new_request(collect_a_task());
         let msg_str: Vec<Byte> = serialize(&msg);
-        print!("Sending (in decimal): {:?}\n", msg_str);
+        log::debug!("Sending (in hex): {}", bytes_to_hex_str(&msg_str));
         stream.write_all(&msg_str).unwrap();
         process_message(receive_message(&mut stream));
     }
 
     stream.shutdown(Shutdown::Both).unwrap();
 
-    println!("Exiting...");
+    log::info!("Exiting...");
 }
 
 /// Receives a message from the server and parse it.
@@ -62,7 +68,7 @@ fn get_sides() -> (f64, f64) {
 /// and returns the sides of the triangle as a [`Vec`] of [`Byte`]s.
 fn collect_a_task() -> Vec<Byte> {
     let (a, b) = get_sides();
-    println!("a = {}, b = {}", a, b);
+    log::debug!("a = {}, b = {}", a, b);
     let mut sides: Vec<Byte> = Vec::new();
     sides.extend(a.to_be_bytes().to_vec());
     sides.extend(b.to_be_bytes().to_vec());
@@ -86,5 +92,10 @@ fn process_response(msg: Message) {
     let mut arr: [Byte; 8] = [0; 8];
     arr.copy_from_slice(payload);
     let hypotenuse: f64 = f64::from_be_bytes(arr);
-    println!("Received hypotenuse: {hypotenuse}");
+    log::info!("Received hypotenuse: {hypotenuse}");
+}
+
+/// Converts a [`Vec`] of [`Byte`]s to a [`String`] of hexadecimal numbers.
+fn bytes_to_hex_str(bytes: &[Byte]) -> String {
+    bytes.iter().map(|byte| format!("{byte:X}")).collect()
 }
