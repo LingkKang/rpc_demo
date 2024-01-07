@@ -12,6 +12,8 @@
 //! ```
 extern crate log;
 
+use super::time::get_formatted_time;
+
 use log::{LevelFilter, Log, Metadata, Record};
 
 /// A custom logger struct that uses stdout to print logs.
@@ -57,12 +59,13 @@ impl Log for Logger {
     /// Log the message.
     fn log(&self, record: &Record) {
         if self.enabled(record.metadata()) {
-            let level_string = {
+            let level_str = {
                 {
                     record.level().to_string().to_uppercase()
                 }
             };
-            let message = format!("[{}]\t {}", level_string, record.args());
+            let time_str = get_formatted_time();
+            let message = format!("{} [{}]\t {}", time_str, level_str, record.args());
             println!("{}", message);
         }
     }
