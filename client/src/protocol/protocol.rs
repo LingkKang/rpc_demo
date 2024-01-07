@@ -1,5 +1,5 @@
 use super::checksum;
-use super::message::{Byte, Message, MessageType};
+use super::message::{Byte, Message, MessageType, MAX_PAYLOAD_SIZE};
 
 /// Serializes all message data into a binary format,
 /// added with a checksum.
@@ -17,7 +17,6 @@ pub fn serialize(msg: &Message) -> Vec<Byte> {
 
 /// Deserializes a binary format into a message.
 /// Some checks are performed to ensure the data is valid.
-#[allow(dead_code)]
 pub fn deserialize(data: &[Byte]) -> Result<Message, &'static str> {
     // Check if the data is too long.
     if data.len() < 2 {
@@ -33,9 +32,9 @@ pub fn deserialize(data: &[Byte]) -> Result<Message, &'static str> {
 
     let msg_type = MessageType::from_byte(data[0] >> 6)?;
 
-    let msg_length: Byte = data[0] & 0b0011_1111;
-    if msg_length as usize != data.len() {
-        return Err("Message length does not match");
+    let msg_length: Byte = (data[0] << 2) >> 2;
+    if (msg_length as usize > MAX_PAYLOAD_SIZE) || (msg_length as usize != data.len()) {
+        return Err("Message length too long or does not match");
     }
 
     let msg_payload: Vec<Byte> = body_data[1..].to_vec();

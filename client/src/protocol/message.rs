@@ -11,20 +11,24 @@
 //! 1. the `msg_type` and `msg_length` form the first byte of the message,
 //! which is the first two bits of the byte for `msg_type` and the following six bits for `msg_length`.
 //! 2. the value of `msg_length` is the length of the entire message in bytes,
-//! so the whole protocol message is capable of carrying `2^6 - 2 = 62` bytes of payload.
+//! as 6 (unsigned) bits can hold value from `0` to `63`.
+//! Its maximum value is defined as [`MAX_PROTOCOL_SIZE`].
+//! So a single protocol message is capable of carrying [`MAX_PROTOCOL_SIZE`]` - 2 = 61` bytes as payload,
+//! this value is denoted as [`MAX_PAYLOAD_SIZE`].
 //! 3. the checksum is not included in the [`Message`] struct,
 //! it is calculated and appended when serializing the message.
+//! Similarly, the process of deserializing will also validate the checksum.
 
 /// A byte is logically equivalent to an 8-bit unsigned integer.
 pub type Byte = u8;
 
 /// Maximum size of a protocol message.
 /// It is counted in bytes.
-const MAX_PROTOCOL_SIZE: usize = 64;
+pub const MAX_PROTOCOL_SIZE: usize = 0b0011_1111;
 
 /// Maximum size of payload
 /// comes from `MAX_PROTOCOL_SIZE - 2`.
-const MAX_PAYLOAD_SIZE: usize = MAX_PROTOCOL_SIZE - 2;
+pub const MAX_PAYLOAD_SIZE: usize = MAX_PROTOCOL_SIZE - 2;
 
 /// The type (action) of a message which is the first two bits of a message.
 ///
@@ -52,7 +56,7 @@ pub enum MessageType {
 }
 
 impl MessageType {
-    /// Convert a `MessageType` to a [`Byte`] as defined in the protocol.
+    /// Convert a [`MessageType`] to a [`Byte`] as defined in the protocol.
     fn to_byte(&self) -> Byte {
         match self {
             MessageType::ERROR => 0b00,
@@ -61,6 +65,7 @@ impl MessageType {
         }
     }
 
+    /// Convert a [`Byte`] to a [`MessageType`] as defined in the protocol.
     pub fn from_byte(byte: Byte) -> Result<MessageType, &'static str> {
         match byte {
             0b00 => Ok(MessageType::ERROR),
@@ -98,6 +103,7 @@ impl Message {
         }
     }
 
+    /// Create a new message in [`MessageType::REQUEST`] type.
     pub fn new_request(msg_payload: Vec<Byte>) -> Message {
         Message::new(
             MessageType::REQUEST,
@@ -112,9 +118,13 @@ impl Message {
         (self.msg_type.to_byte() << 6) | self.msg_length
     }
 
-    /// Get the payload of the message.
+    /// Get the payload of the message in [`Vec<Byte>`].
     pub fn get_payload(&self) -> &Vec<Byte> {
         &self.msg_payload
+    }
+
+    pub fn get_type(&self) -> &MessageType {
+        &self.msg_type
     }
 }
 

@@ -8,8 +8,8 @@ use std::{
 use rand::Rng;
 
 use crate::protocol::{
-    message::{Byte, Message},
-    protocol::serialize,
+    message::{Byte, Message, MessageType, MAX_PROTOCOL_SIZE},
+    protocol::{deserialize, serialize},
 };
 
 const URL: &str = "test.lingkang.dev:8333";
@@ -23,14 +23,13 @@ fn main() {
             return;
         }
     };
-    receive_message(&mut stream);
 
     for _ in 0..MAX_TASKS {
         let msg = Message::new_request(collect_a_task());
         let msg_str: Vec<Byte> = serialize(&msg);
         print!("Sending (in decimal): {:?}\n", msg_str);
         stream.write_all(&msg_str).unwrap();
-        receive_message(&mut stream);
+        process_message(receive_message(&mut stream));
     }
 
     stream.shutdown(Shutdown::Both).unwrap();
@@ -38,14 +37,12 @@ fn main() {
     println!("Exiting...");
 }
 
-/// Receives a message from the server and prints it.
-fn receive_message(stream: &mut TcpStream) {
-    let mut buffer: [Byte; 64] = [0; 64];
+/// Receives a message from the server and parse it.
+fn receive_message(stream: &mut TcpStream) -> Message {
+    let mut buffer: [Byte; MAX_PROTOCOL_SIZE] = [0; MAX_PROTOCOL_SIZE];
     let bytes_read = stream.read(&mut buffer).unwrap();
-    println!(
-        "Received: {}",
-        String::from_utf8_lossy(&buffer[..bytes_read])
-    );
+
+    deserialize(&buffer[..bytes_read]).unwrap()
 }
 
 /// Generates a random [`f64`] number.
@@ -70,4 +67,24 @@ fn collect_a_task() -> Vec<Byte> {
     sides.extend(a.to_be_bytes().to_vec());
     sides.extend(b.to_be_bytes().to_vec());
     sides
+}
+
+/// Process a message, basically check the type of the message
+/// and call the corresponding function.
+fn process_message(msg: Message) {
+    match msg.get_type() {
+        MessageType::ERROR => todo!(),
+        MessageType::REQUEST => todo!(),
+        MessageType::RESPONSE => process_response(msg),
+    }
+}
+
+/// Process a message of type [`MessageType::RESPONSE`].
+fn process_response(msg: Message) {
+    let payload: &Vec<Byte> = msg.get_payload();
+    // Convert the vector to an array.
+    let mut arr: [Byte; 8] = [0; 8];
+    arr.copy_from_slice(payload);
+    let hypotenuse: f64 = f64::from_be_bytes(arr);
+    println!("Received hypotenuse: {hypotenuse}");
 }
