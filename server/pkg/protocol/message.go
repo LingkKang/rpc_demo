@@ -1,6 +1,7 @@
 package protocol
 
 import (
+	"bytes"
 	"encoding/binary"
 	"fmt"
 	"math"
@@ -80,4 +81,36 @@ func ParsePayloadToFloat64s(payload []byte) ([]float64, error) {
 		floats = append(floats, f)
 	}
 	return floats, nil
+}
+
+func GetMessageHead(msg Message) byte {
+	return (byte(msg.msg_code) << 6) | msg.msg_len
+}
+
+func NewResponseMessage(result float64) Message {
+	// Convert the passed in reslut float to bytes.
+	buf := new(bytes.Buffer)
+	binary.Write(buf, binary.BigEndian, result)
+
+	// Construct basic `Message` structure.
+	msg := Message{
+		msg_code:    RESPONSE,
+		msg_len:     8 + MSG_HEADER_SIZE + MSG_CHECKSUM_SIZE,
+		msg_payload: buf.Bytes(),
+	}
+
+	// Calculate and fill in the checksum.
+	data := append([]byte{GetMessageHead(msg)}, msg.msg_payload...)
+	msg.msg_checksum = generateChecksum(data)
+
+	return msg
+}
+
+// Convert a `Message` to a slice of bytes.
+func SerializeMessage(msg Message) []byte {
+	buf := new(bytes.Buffer)
+	binary.Write(buf, binary.BigEndian, GetMessageHead(msg))
+	binary.Write(buf, binary.BigEndian, msg.msg_payload)
+	binary.Write(buf, binary.BigEndian, msg.msg_checksum)
+	return buf.Bytes()
 }

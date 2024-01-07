@@ -22,7 +22,6 @@ var (
 )
 
 func main() {
-
 	DebugLogger = log.New(os.Stdout, "[DEBUG]\t", log.Ldate|log.Ltime|log.LUTC)
 	InfoLogger = log.New(os.Stdout, "[INFO]\t", log.Ldate|log.Ltime|log.LUTC)
 	WarnLogger = log.New(os.Stdout, "[WARN]\t", log.Ldate|log.Ltime|log.LUTC)
@@ -46,7 +45,6 @@ func main() {
 func handleRequest(conn net.Conn) {
 	defer conn.Close()
 
-	conn.Write([]byte("Greeting from Golang!\n"))
 	conn.SetDeadline(time.Now().Add(
 		TIMEOUT_DURATION * time.Second))
 
@@ -76,8 +74,6 @@ func handleRequest(conn net.Conn) {
 			break
 		}
 
-		conn.Write([]byte("Message received.\n"))
-
 		InfoLogger.Printf(
 			"Message with head %X and checksum %X (in hex) received",
 			head, checksum)
@@ -92,7 +88,7 @@ func handleRequest(conn net.Conn) {
 			ErrorLogger.Println(err.Error())
 			ErrorLogger.Panicln("TODO")
 		}
-		processMessage(msg)
+		processMessage(msg, conn)
 	}
 
 	InfoLogger.Printf(
@@ -116,38 +112,47 @@ func handleErr(conn net.Conn, err error) {
 	time.Sleep(100 * time.Millisecond)
 }
 
-func processMessage(msg protocol.Message) {
+func processMessage(msg protocol.Message, conn net.Conn) {
 	switch protocol.GetMessageCode(msg) {
 	case protocol.REQUEST:
-		handleMessageRequest(msg)
+		serialized_msg, err := handleMessageRequest(msg)
+		if err != nil {
+			ErrorLogger.Fatal(err.Error())
+		}
+		conn.Write(serialized_msg)
+		InfoLogger.Println("Response sent")
+
 	case protocol.ERROR:
 		handleMessageError(msg)
+
 	default:
 		handleMessageOther(msg)
 	}
 }
 
-func handleMessageRequest(msg protocol.Message) {
+func handleMessageRequest(msg protocol.Message) ([]byte, error) {
+	// Parse received `Message` payload.
 	payload := protocol.GetMessagePayload(msg)
 	sides, err := protocol.ParsePayloadToFloat64s(payload)
-	if err == nil {
-		DebugLogger.Println("Parse the sides as ", sides)
-		a := sides[0]
-		b := sides[1]
-		c := calculateHypotenuse(a, b)
-		DebugLogger.Println("Get hypotenuse ", c)
+	if err != nil {
+		log.Panic(err.Error())
 	}
-
-}
-
-func handleMessageError(msg protocol.Message) {
-
-}
-
-func handleMessageOther(msg protocol.Message) {
-
+	// Calculate the hypotenuse.
+	DebugLogger.Println("Parse the sides as", sides)
+	a := sides[0]
+	b := sides[1]
+	c := calculateHypotenuse(a, b)
+	DebugLogger.Println("Get hypotenuse", c)
+	// Return a new message as response, it should be serialized.
+	return protocol.SerializeMessage(protocol.NewResponseMessage(c)), nil
 }
 
 func calculateHypotenuse(a float64, b float64) float64 {
 	return math.Hypot(a, b)
+}
+
+func handleMessageError(msg protocol.Message) {
+}
+
+func handleMessageOther(msg protocol.Message) {
 }
