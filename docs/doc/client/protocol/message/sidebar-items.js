@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["MAX_PAYLOAD_SIZE","MAX_PROTOCOL_SIZE"],"enum":["MessageType"],"struct":["Message"],"type":["Byte"]};

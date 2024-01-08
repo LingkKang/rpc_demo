@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["MAX_TASKS","URL"],"fn":["bytes_to_hex_str","collect_a_task","get_random_f64","get_sides","main","process_message","process_response","receive_message"],"mod":["logger","protocol"]};
