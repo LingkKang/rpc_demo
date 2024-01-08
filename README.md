@@ -2,9 +2,16 @@
 
 Remote Procedure Call (RPC)
 
-## Usage
+- [1. Server](#1-server)
+  - [1.1. Run](#11-run)
+- [2. Client](#2-client)
+  - [2.1. Run](#21-run)
 
-### Server
+## 1. Server
+
+The server side is implemented in Go, under the `./server` directory.
+
+### 1.1. Run
 
 The server is already hosted on `test.lingkang.dev:8333`, but you can also run it locally:
 
@@ -20,3 +27,18 @@ nohup ./server/target/rpc_demo &
 ```
 
 Use `nohup ./server/target/rpc_demo >/dev/null 2>&1 &` to discard the output.
+
+---
+
+## 2. Client
+
+The client side is implemented in Rust, under the `./client` directory.
+
+### 2.1. Run
+
+It can be run locally:
+
+``` bash
+cd client
+cargo run
+```
