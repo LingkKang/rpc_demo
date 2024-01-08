@@ -20,3 +20,16 @@ nohup ./server/target/rpc_demo &
 ```
 
 Use `nohup ./server/target/rpc_demo >/dev/null 2>&1 &` to discard the output.
+
+### Client
+
+```bash
+cd client
+cargo run
+```
+
+#### Output
+
+A naive implementation of logger based on `log` crate is used in this demo:
+
+![The running output of the client side](./img/client_running.png)
