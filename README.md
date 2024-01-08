@@ -7,6 +7,7 @@ Remote Procedure Call (RPC)
   - [1.2. Output](#12-output)
 - [2. Client](#2-client)
   - [2.1. Run](#21-run)
+  - [2.2. Output](#22-output)
 
 ## 1. Server
 
@@ -51,3 +52,9 @@ It can be run locally:
 cd client
 cargo run
 ```
+
+### 2.2. Output
+
+A naive implementation of logger based on `log` crate is used in this demo:
+
+![The running output of the client side](./img/client_running.png)
