@@ -2,6 +2,7 @@ package protocol
 
 import "testing"
 
+// Test case struct for testing checksum
 type ChecksumTestCase struct {
 	name     string
 	input    []byte

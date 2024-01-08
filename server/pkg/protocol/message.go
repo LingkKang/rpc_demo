@@ -7,6 +7,8 @@ import (
 	"math"
 )
 
+// Enumeration of MessageCode,
+// which will indicate the action/information type of the message.
 type MessageCode byte
 
 const (
@@ -15,6 +17,7 @@ const (
 	RESPONSE MessageCode = 0b10
 )
 
+// A self-defined protocol message.
 type Message struct {
 	msg_code     MessageCode
 	msg_len      byte
@@ -25,10 +28,15 @@ type Message struct {
 const MSG_HEADER_SIZE = 1
 const MSG_CHECKSUM_SIZE = 1
 
+// Given the header byte,
+// return the payload length,
+// which is the last 6 bits of the header.
 func GetPayloadLength(head byte) byte {
 	return ((head << 2) >> 2) - MSG_HEADER_SIZE - MSG_CHECKSUM_SIZE
 }
 
+// Given the processed byte of `MessageCode`,
+// return the corresponding enum.
 func convertMessageCodeFromByte(code byte) MessageCode {
 	switch code {
 	case 0b00:
@@ -42,6 +50,7 @@ func convertMessageCodeFromByte(code byte) MessageCode {
 	}
 }
 
+// Deserialize bytes of message to an acutal `Message`.
 func NewMessageFromBytes(
 	head byte,
 	payload []byte,
@@ -66,6 +75,7 @@ func GetMessagePayload(msg Message) []byte {
 	return msg.msg_payload
 }
 
+// Parse the big-endian bytes of payload to actual `float64`s.
 func ParsePayloadToFloat64s(payload []byte) ([]float64, error) {
 	if len(payload)%8 != 0 {
 		return nil, fmt.Errorf(
@@ -83,10 +93,12 @@ func ParsePayloadToFloat64s(payload []byte) ([]float64, error) {
 	return floats, nil
 }
 
+// Generate the first byte (head) of the message.
 func GetMessageHead(msg Message) byte {
 	return (byte(msg.msg_code) << 6) | msg.msg_len
 }
 
+// Generate a new message in the type of `RESPONSE` as server feedback.
 func NewResponseMessage(result float64) Message {
 	// Convert the passed in reslut float to bytes.
 	buf := new(bytes.Buffer)

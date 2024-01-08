@@ -6,12 +6,15 @@ import (
 	"math"
 	"net"
 	"os"
-	"rpc_demo/server/pkg/protocol"
+	"rpc_demo_server/pkg/protocol"
 	"strconv"
 	"time"
 )
 
+// The default listening port.
 const PORT = 8333
+
+// The default timeout duration in seconds.
 const TIMEOUT_DURATION = 10
 
 var (
@@ -27,6 +30,7 @@ func main() {
 	WarnLogger = log.New(os.Stdout, "[WARN]\t", log.Ldate|log.Ltime|log.LUTC)
 	ErrorLogger = log.New(os.Stdout, "[ERROR]\t", log.Ldate|log.Ltime|log.LUTC)
 
+	// Listen to the specified prot.
 	listener, _ := net.Listen("tcp", ":"+strconv.Itoa(PORT))
 	defer listener.Close()
 	InfoLogger.Printf("Start to listen on port %d...\n", PORT)
@@ -38,18 +42,24 @@ func main() {
 			"Connected to %s\n",
 			connection.RemoteAddr().String())
 
+		// Use `goroutine` to handle client connection concurrently.
 		go handleRequest(connection)
 	}
 }
 
+// When a TCP connection was established between server and client,
+// `handleRequest()` will be responsible to serve it till its termination.
 func handleRequest(conn net.Conn) {
 	defer conn.Close()
 
+	// Set up connection time-out.
 	conn.SetDeadline(time.Now().Add(
 		TIMEOUT_DURATION * time.Second))
 
+	// Keeps looping to read and process new requests,
+	// until it's terminated by the client or time-out reached.
 	for {
-		// Read the head of the message
+		// Read the head of the message.
 		head := make([]byte, protocol.MSG_HEADER_SIZE)
 		_, err := conn.Read(head)
 		if err != nil {
@@ -57,7 +67,7 @@ func handleRequest(conn net.Conn) {
 			break
 		}
 
-		// Read the message payload
+		// Read the message payload.
 		payload_len := protocol.GetPayloadLength(head[0])
 		payload := make([]byte, payload_len)
 		_, err = conn.Read(payload)
@@ -66,7 +76,7 @@ func handleRequest(conn net.Conn) {
 			break
 		}
 
-		// Read the checksum bit of the message
+		// Read the checksum byte of the message.
 		checksum := make([]byte, protocol.MSG_CHECKSUM_SIZE)
 		_, err = conn.Read(checksum)
 		if err != nil {
@@ -79,6 +89,7 @@ func handleRequest(conn net.Conn) {
 			head, checksum)
 		DebugLogger.Printf("Payload: %X\n", payload)
 
+		// Form the received bytes into a `protocol.Message`.
 		msg, err := protocol.NewMessageFromBytes(
 			head[0],
 			payload,
@@ -88,6 +99,7 @@ func handleRequest(conn net.Conn) {
 			ErrorLogger.Println(err.Error())
 			ErrorLogger.Panicln("TODO")
 		}
+
 		processMessage(msg, conn)
 	}
 
@@ -96,22 +108,25 @@ func handleRequest(conn net.Conn) {
 		conn.RemoteAddr().String())
 }
 
+// handle all kinds of errors during reading from the TCP stream.
 func handleErr(conn net.Conn, err error) {
 	// reset the timeout duration
 	// otherwise writting to client is disabled
 	conn.SetDeadline(time.Time{})
 	if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
 		WarnLogger.Println("Connection timed out, closing")
-		conn.Write([]byte("Connection timeout...\n"))
+		conn.Write(provideErrorMessage("Connection timeout..."))
 	} else if err == io.EOF {
 		InfoLogger.Println("Connection closed by client")
 	} else {
 		ErrorLogger.Println("Error reading: ", err.Error())
-		conn.Write([]byte("Error at reading, closing...\n"))
+		conn.Write(provideErrorMessage("Error at reading..."))
 	}
+	// Try to make sure the write-back message can reach.
 	time.Sleep(100 * time.Millisecond)
 }
 
+// Process a `protocol.Message` according to its message type.
 func processMessage(msg protocol.Message, conn net.Conn) {
 	switch protocol.GetMessageCode(msg) {
 	case protocol.REQUEST:
@@ -130,6 +145,8 @@ func processMessage(msg protocol.Message, conn net.Conn) {
 	}
 }
 
+// Handle a message with type `REQUEST`.
+// Basically parse the floats and return calculated value.
 func handleMessageRequest(msg protocol.Message) ([]byte, error) {
 	// Parse received `Message` payload.
 	payload := protocol.GetMessagePayload(msg)
@@ -155,4 +172,8 @@ func handleMessageError(msg protocol.Message) {
 }
 
 func handleMessageOther(msg protocol.Message) {
+}
+
+func provideErrorMessage(str string) []byte {
+	panic("TODO")
 }

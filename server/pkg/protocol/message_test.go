@@ -5,6 +5,7 @@ import (
 	"testing"
 )
 
+// Test case struct for converting message payload.
 type PayloadConversionTestCase struct {
 	name    string
 	payload []byte
