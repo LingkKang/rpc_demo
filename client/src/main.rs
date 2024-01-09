@@ -18,7 +18,6 @@ use crate::logger::logger::Logger;
 const URL: &str = "test.lingkang.dev:8333";
 const MAX_TASKS: usize = 4;
 
-#[allow(unreachable_code)]
 fn main() {
     Logger::init(Some(log::LevelFilter::Debug));
 
